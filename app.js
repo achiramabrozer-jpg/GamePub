@@ -16,15 +16,21 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 //    le temps a regarder avant de debloquer la recompense.
 function injectAdsterra() {
   const slot = document.getElementById("adsterraSlot");
-  // Exemple (a remplacer par le vrai code Adsterra) :
-  //
-  // slot.innerHTML = "";
-  // const script = document.createElement("script");
-  // script.src = "//pl000000.effectivecpmgate.com/xx/xx/xx/xxxxxxxx.js";
-  // script.async = true;
-  // slot.appendChild(script);
-  //
-  // Tant que ce n'est pas configure, on laisse le texte d'exemple visible.
+  slot.innerHTML = "";
+
+  // On retire le script precedent avant d'en ajouter un nouveau, pour eviter
+  // d'empiler plusieurs Popunder si l'utilisateur enchaine les visionnages.
+  const old = document.getElementById("adsterra-script");
+  if (old) old.remove();
+
+  // Popunder Adsterra — se declenche au clic sur "Regarder" (appel de
+  // injectAdsterra() depuis openWatch ci-dessous).
+  const script = document.createElement("script");
+  script.id = "adsterra-script";
+  script.src = "https://pl30653477.effectivecpmnetwork.com/ff/cb/ee/ffcbee00d7ebb42dc4ab275d61e677cf.js";
+  document.body.appendChild(script);
+
+  slot.textContent = "Publicité chargée.";
 }
 
 // =============================================================================
@@ -56,6 +62,37 @@ function fmtMoney(n) {
   } catch {
     return n + " " + currentCurrency.code;
   }
+}
+
+function fmtXOF(n) {
+  return new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(n) + " XOF";
+}
+
+const WITHDRAW_RULES = {
+  watchedAds: 50,
+  bonusPerAd: 50,
+  minBalance: 10000,
+  referrals: 8,
+};
+
+function renderWithdrawProgress({ watchedCount = 0, balance = 0, referralCount = 0 }) {
+  const el = document.getElementById("wdProgress");
+  if (!el) return;
+
+  const bonusEarned = watchedCount * WITHDRAW_RULES.bonusPerAd;
+  const watchedDone = watchedCount >= WITHDRAW_RULES.watchedAds;
+  const balanceDone = balance >= WITHDRAW_RULES.minBalance;
+  const referralsDone = referralCount >= WITHDRAW_RULES.referrals;
+  const isReady = watchedDone && balanceDone && referralsDone;
+
+  el.innerHTML = `
+    <div style="display:grid;gap:8px;">
+      <div style="display:flex;justify-content:space-between;gap:8px;"><span>Publicités regardées</span><strong>${watchedCount}/${WITHDRAW_RULES.watchedAds}</strong></div>
+      <div style="display:flex;justify-content:space-between;gap:8px;"><span>Bonus accumulé</span><strong>${bonusEarned} FCFA</strong></div>
+      <div style="display:flex;justify-content:space-between;gap:8px;"><span>Solde minimum</span><strong>${fmtXOF(balance)} / ${fmtXOF(WITHDRAW_RULES.minBalance)}</strong></div>
+      <div style="display:flex;justify-content:space-between;gap:8px;"><span>Invitations</span><strong>${referralCount}/${WITHDRAW_RULES.referrals}</strong></div>
+      <div style="margin-top:4px; font-weight:700; color:${isReady ? "var(--success)" : "var(--muted)"};">${isReady ? "✅ Prêt pour un retrait" : "⏳ Encore quelques étapes à compléter"}</div>
+    </div>`;
 }
 
 // =============================================================================
@@ -292,6 +329,15 @@ async function loadWithdraw() {
   document.getElementById("wdBalance").textContent = fmtMoney(profile.balance);
   document.getElementById("wdMinInfo").textContent =
     `Retrait minimum : ${fmtMoney(currentCurrency.min)}. Le paiement est traité manuellement sous 24-48h.`;
+
+  const { count: watchedCount } = await sb
+    .from("watches")
+    .select("*", { count: "exact", head: true })
+    .eq("user_id", session.user.id)
+    .not("completed_at", "is", null);
+
+  const referralCount = Number(profile?.referrals_count || profile?.referral_count || 0);
+  renderWithdrawProgress({ watchedCount: watchedCount ?? 0, balance: Number(profile?.balance || 0), referralCount });
 
   const select = document.getElementById("wdMethod");
   select.innerHTML = "";
