@@ -6,6 +6,24 @@ authentification) depuis le navigateur. Vous pouvez l'héberger n'importe où
 qui sert des fichiers statiques : Netlify, Vercel, GitHub Pages, Cloudflare
 Pages, ou même un simple hébergement mutuel.
 
+## Nouveautés récentes
+
+- **Rotation horaire des pubs** : le tableau de bord n'affiche que 5 publicités
+  à la fois. La sélection change automatiquement chaque heure (tout le monde
+  voit la même sélection pendant la même heure) — un compte à rebours indique
+  le temps restant avant la prochaine sélection. Si vous avez 5 pubs ou moins
+  au total, elles sont toutes affichées en permanence.
+- **Plus de lecteur vidéo interne** : la page de visionnage n'essaie plus
+  d'afficher une vidéo à nous — elle déclenche uniquement le Popunder Adsterra
+  en arrière-plan pendant que le minuteur tourne. C'est Adsterra qui génère la
+  pub à chaque clic sur "Regarder".
+- **Système de parrainage réel** : le lien d'invitation (`?ref=...`) est
+  maintenant vraiment enregistré en base à l'inscription (voir
+  `supabase-schema.sql`, colonne `referred_by`), et le compteur
+  "Invitations X/8" sur la page de retrait reflète les vrais parrainages.
+- **Page de connexion repensée** avec un argumentaire visuel à côté du
+  formulaire.
+
 ## Étape 1 — Créer le projet Supabase
 
 1. Allez sur [supabase.com](https://supabase.com), créez un compte et un
