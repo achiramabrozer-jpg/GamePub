@@ -2,7 +2,23 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#12203d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="format-detection" content="telephone=no">
+<meta property="og:title" content="GainPub — Regardez des pubs, gagnez de l'argent">
+<meta property="og:description" content="Regardez des publicités, gagnez des récompenses et retirez votre argent.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="og-image.png">
+<meta property="og:image:alt" content="GainPub — Regardez des publicités et gagnez de l'argent">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="twitter:card" content="summary_large_image">
+<meta property="twitter:title" content="GainPub — Regardez des pubs, gagnez de l'argent">
+<meta property="twitter:description" content="Regardez des publicités, gagnez des récompenses et retirez votre argent.">
+<meta property="twitter:image" content="og-image.png">
+<meta property="twitter:image:alt" content="GainPub — Regardez des publicités et gagnez de l'argent">
 <title>GainPub — Regardez des pubs, gagnez de l'argent</title>
 <link rel="stylesheet" href="style.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -21,37 +37,54 @@
 
   <!-- ================= AUTH ================= -->
   <div class="view active" id="view-auth">
-    <div class="container" style="max-width:460px;">
-      <h1>Regardez. Gagnez. Retirez.</h1>
-      <p class="lede">Chaque publicité regardée jusqu'au bout vous rapporte quelques FCFA / € / $, crédités sur votre compte.</p>
+    <div class="container" style="max-width:920px;">
+      <div class="auth-layout">
+        <div class="auth-pitch">
+          <h1>Regardez. Gagnez. Retirez.</h1>
+          <p class="lede">Chaque publicité regardée jusqu'au bout vous rapporte quelques FCFA / € / $, crédités instantanément sur votre compte.</p>
 
-      <div class="card">
-        <div class="tabs">
-          <button id="tabLogin" class="active" onclick="switchAuthTab('login')">Connexion</button>
-          <button id="tabRegister" onclick="switchAuthTab('register')">Inscription</button>
+          <div class="pitch-item">
+            <span class="pitch-icon">🎬</span>
+            <div><strong>Regardez</strong><span>Une pub s'affiche, un minuteur compte les secondes.</span></div>
+          </div>
+          <div class="pitch-item">
+            <span class="pitch-icon">💰</span>
+            <div><strong>Gagnez</strong><span>La récompense est créditée automatiquement sur votre solde.</span></div>
+          </div>
+          <div class="pitch-item">
+            <span class="pitch-icon">📲</span>
+            <div><strong>Retirez</strong><span>Mobile Money, PayPal ou virement selon votre pays.</span></div>
+          </div>
         </div>
 
-        <form id="loginForm">
-          <label>Email</label>
-          <input type="email" id="loginEmail" required>
-          <label>Mot de passe</label>
-          <input type="password" id="loginPassword" required>
-          <div style="margin-top:20px;"><button type="submit">Se connecter</button></div>
-          <div class="error" id="loginError"></div>
-        </form>
+        <div class="card auth-card">
+          <div class="tabs">
+            <button id="tabLogin" class="active" onclick="switchAuthTab('login')">Connexion</button>
+            <button id="tabRegister" onclick="switchAuthTab('register')">Inscription</button>
+          </div>
 
-        <form id="registerForm" style="display:none;">
-          <label>Nom complet</label>
-          <input type="text" id="regName" required>
-          <label>Email</label>
-          <input type="email" id="regEmail" required>
-          <label>Téléphone (optionnel, utile pour Mobile Money)</label>
-          <input type="tel" id="regPhone" placeholder="9x xx xx xx">
-          <label>Mot de passe (6 caractères min.)</label>
-          <input type="password" id="regPassword" required>
+          <form id="loginForm">
+            <label>Email</label>
+            <input type="email" id="loginEmail" required>
+            <label>Mot de passe</label>
+            <input type="password" id="loginPassword" required>
+            <div style="margin-top:20px;"><button type="submit">Se connecter</button></div>
+            <div class="error" id="loginError"></div>
+          </form>
+
+          <form id="registerForm" style="display:none;">
+            <label>Nom complet</label>
+            <input type="text" id="regName" required>
+            <label>Email</label>
+            <input type="email" id="regEmail" required>
+            <label>Téléphone (optionnel, utile pour Mobile Money)</label>
+            <input type="tel" id="regPhone" placeholder="9x xx xx xx">
+            <label>Mot de passe (6 caractères min.)</label>
+            <input type="password" id="regPassword" required>
           <div style="margin-top:20px;"><button type="submit">Créer mon compte</button></div>
           <div class="error" id="registerError"></div>
         </form>
+        </div>
       </div>
     </div>
   </div>
@@ -64,8 +97,22 @@
         <span class="amount" id="dashBalance">—</span>
       </div></div>
 
-      <h2>Publicités disponibles aujourd'hui</h2>
+      <div class="card">
+        <h2>Votre lien d’invitation</h2>
+        <p class="lede" style="margin-top:-6px;">Partagez ce lien pour inviter des amis et augmenter vos chances de retirer.</p>
+        <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+          <input type="text" id="inviteLink" readonly style="flex:1; min-width:220px;">
+          <button type="button" onclick="copyInviteLink()">Copier le lien</button>
+        </div>
+        <div class="success" id="inviteOk"></div>
+      </div>
+
+      <h2>Publicités disponibles cette heure-ci</h2>
       <p class="lede" style="margin-top:-8px;">Regardez chaque pub jusqu'au bout pour débloquer sa récompense. Une pub ne rapporte qu'une fois par jour.</p>
+      <div class="ads-quota-banner">
+        <span>🕐 Une nouvelle sélection de <strong>5 publicités</strong> apparaît chaque heure.</span>
+        <span>Prochaine sélection dans <strong id="nextRotation">—</strong></span>
+      </div>
       <div class="grid" id="adsGrid"></div>
     </div>
   </div>
@@ -77,10 +124,11 @@
         <h2 id="watchTitle">Chargement…</h2>
 
         <div class="ad-slot" id="adsterraSlot">
-          Emplacement pub Adsterra — collez ici le code fourni par votre tableau de bord Adsterra (voir commentaire dans app.js).
+          Chargement de la publicité…
         </div>
-
-        <div id="playerContainer"></div>
+        <p class="lede" style="font-size:0.82rem;margin-top:-8px;">
+          👉 La publicité s'ouvre dans un <strong>nouvel onglet</strong> — vérifiez votre barre d'onglets si vous ne voyez rien se passer. Revenez ensuite sur cette page pour valider.
+        </p>
 
         <div class="ring-wrap">
           <svg width="130" height="130" class="ring">
@@ -130,10 +178,12 @@
 
       <div class="card">
         <h2>Historique</h2>
-        <table>
-          <thead><tr><th>Date</th><th>Montant</th><th>Méthode</th><th>Statut</th></tr></thead>
-          <tbody id="wdHistoryBody"></tbody>
-        </table>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Date</th><th>Montant</th><th>Méthode</th><th>Statut</th></tr></thead>
+            <tbody id="wdHistoryBody"></tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>
@@ -158,18 +208,22 @@
 
       <div class="card">
         <h2>Retraits à traiter</h2>
-        <table>
-          <thead><tr><th>Utilisateur</th><th>Montant</th><th>Méthode</th><th>Destination</th><th>Statut</th><th>Action</th></tr></thead>
-          <tbody id="adminWithdrawalsBody"></tbody>
-        </table>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Utilisateur</th><th>Montant</th><th>Méthode</th><th>Destination</th><th>Statut</th><th>Action</th></tr></thead>
+            <tbody id="adminWithdrawalsBody"></tbody>
+          </table>
+        </div>
       </div>
 
       <div class="card">
         <h2>Publicités</h2>
-        <table>
-          <thead><tr><th>Titre</th><th>Récompense</th><th>Durée</th><th>Statut</th><th>Action</th></tr></thead>
-          <tbody id="adminAdsBody"></tbody>
-        </table>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Titre</th><th>Récompense</th><th>Durée</th><th>Statut</th><th>Action</th></tr></thead>
+            <tbody id="adminAdsBody"></tbody>
+          </table>
+        </div>
 
         <h3 style="margin-top:24px;">Ajouter une publicité</h3>
         <form id="adForm">
@@ -177,8 +231,8 @@
           <input type="text" id="adTitle" required>
           <label>Description</label>
           <input type="text" id="adDescription">
-          <label>Lien de la vidéo (YouTube, Vimeo, ou lien direct .mp4)</label>
-          <input type="url" id="adVideoUrl" required placeholder="https://www.youtube.com/watch?v=...">
+          <label>Référence vidéo (optionnel, non affiché — la pub réelle vient d'Adsterra)</label>
+          <input type="url" id="adVideoUrl" placeholder="https://... (facultatif)">
           <label>Récompense</label>
           <input type="number" id="adReward" min="1" required>
           <label>Durée à regarder (secondes)</label>
@@ -190,10 +244,12 @@
 
       <div class="card">
         <h2>Utilisateurs</h2>
-        <table>
-          <thead><tr><th>Nom</th><th>Téléphone</th><th>Solde</th></tr></thead>
-          <tbody id="adminUsersBody"></tbody>
-        </table>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Nom</th><th>Téléphone</th><th>Solde</th></tr></thead>
+            <tbody id="adminUsersBody"></tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>
