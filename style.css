@@ -18,6 +18,14 @@ body {
   background: var(--navy-deep);
   color: var(--cream);
   min-height: 100vh;
+  overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+img, video, svg {
+  max-width: 100%;
+  height: auto;
 }
 
 a { color: inherit; }
@@ -70,8 +78,8 @@ a { color: inherit; }
 }
 
 h1, h2, h3 { font-weight: 800; letter-spacing: -0.01em; }
-h1 { font-size: 2rem; }
-p.lede { color: var(--muted); font-size: 1.05rem; line-height: 1.5; }
+h1 { font-size: clamp(1.45rem, 2.8vw, 2rem); }
+p.lede { color: var(--muted); font-size: clamp(0.95rem, 1.8vw, 1.05rem); line-height: 1.5; }
 
 .balance-hero {
   display: flex;
@@ -84,7 +92,7 @@ p.lede { color: var(--muted); font-size: 1.05rem; line-height: 1.5; }
   margin-bottom: 24px;
 }
 .balance-hero .label { color: var(--muted); font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.08em; }
-.balance-hero .amount { font-size: 2.6rem; font-weight: 900; color: var(--gold); font-variant-numeric: tabular-nums; }
+.balance-hero .amount { font-size: clamp(1.8rem, 4vw, 2.6rem); font-weight: 900; color: var(--gold); font-variant-numeric: tabular-nums; }
 .balance-hero .unit { color: var(--muted); font-size: 1.1rem; }
 
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
@@ -117,6 +125,7 @@ button, .btn {
   background: var(--gold);
   color: var(--navy-deep);
   transition: transform 0.08s ease, opacity 0.15s ease;
+  min-height: 44px;
 }
 button:hover, .btn:hover { opacity: 0.92; }
 button:active { transform: scale(0.98); }
@@ -172,6 +181,11 @@ footer.notice {
   color: var(--muted); font-size: 0.8rem; line-height: 1.5;
 }
 
+.table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 /* Ajouts pour la version single-page (3 fichiers) */
 .view { display: none; }
 .view.active { display: block; }
@@ -186,3 +200,193 @@ footer.notice {
   font-size: 0.85rem;
   margin-bottom: 16px;
 }
+
+@media (max-width: 1024px) {
+  .container {
+    padding: 28px 20px 70px;
+  }
+
+  .grid {
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .topbar {
+    padding: 14px 16px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .nav-links {
+    flex-wrap: wrap;
+    gap: 8px 12px;
+    font-size: 0.9rem;
+  }
+
+  .container {
+    padding: 20px 14px 60px;
+  }
+
+  h1 {
+    font-size: 1.7rem;
+  }
+
+  p.lede {
+    font-size: 0.98rem;
+  }
+
+  .balance-hero {
+    padding: 20px 16px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .balance-hero .amount {
+    font-size: 2rem;
+  }
+
+  .card {
+    padding: 16px;
+  }
+
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ad-card .thumb {
+    height: 96px;
+  }
+
+  .tabs {
+    flex-direction: column;
+  }
+
+  .tabs button {
+    width: 100%;
+  }
+
+  button, .btn {
+    width: 100%;
+    padding: 13px 16px;
+  }
+
+  button.secondary {
+    width: auto;
+    min-width: 0;
+  }
+
+  input, select {
+    padding: 11px 12px;
+  }
+
+  .ring-label {
+    top: -96px;
+    font-size: 1.5rem;
+  }
+
+  table {
+    min-width: 520px;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 640px) {
+  .container {
+    padding: 16px 14px 36px;
+  }
+
+  .card {
+    padding: 14px;
+  }
+
+  .balance-hero {
+    padding: 14px 16px;
+    margin-bottom: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .container {
+    padding: 16px 12px 48px;
+  }
+
+  .topbar {
+    padding: 12px 12px;
+  }
+
+  .brand {
+    font-size: 1.1rem;
+  }
+
+  .nav-links {
+    gap: 6px 10px;
+    font-size: 0.85rem;
+  }
+
+  .card {
+    padding: 14px;
+    border-radius: 12px;
+  }
+
+  h1 {
+    font-size: 1.45rem;
+  }
+
+  .balance-hero .amount {
+    font-size: 1.8rem;
+  }
+
+  .ad-card .body {
+    padding: 14px;
+  }
+}
+
+/* Page de connexion — mise en page à deux colonnes */
+.auth-layout {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  gap: 40px;
+  align-items: start;
+  padding-top: 20px;
+}
+.auth-pitch h1 { margin-top: 0; }
+.pitch-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin-top: 20px;
+}
+.pitch-icon {
+  width: 42px; height: 42px;
+  flex: none;
+  border-radius: 12px;
+  background: rgba(244,180,0,0.12);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.3rem;
+}
+.pitch-item strong { display: block; margin-bottom: 2px; }
+.pitch-item span { color: var(--muted); font-size: 0.9rem; }
+.auth-card { margin-top: 0; }
+
+@media (max-width: 768px) {
+  .auth-layout { grid-template-columns: 1fr; gap: 24px; }
+}
+
+/* Liste d'annonces limitée / rotation horaire */
+.ads-quota-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: rgba(244,180,0,0.08);
+  border: 1px solid rgba(244,180,0,0.25);
+  border-radius: 10px;
+  padding: 10px 16px;
+  margin-bottom: 16px;
+  font-size: 0.85rem;
+  color: var(--cream);
+  flex-wrap: wrap;
+}
+.ads-quota-banner strong { color: var(--gold); }
