@@ -14,6 +14,20 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 //    du commentaire. Adsterra ne fournit pas d'evenement "pub terminee" :
 //    la pub s'affiche simplement pendant que notre propre minuteur compte
 //    le temps a regarder avant de debloquer la recompense.
+// 2) Adsterra : deux formats sont geres ici.
+//
+//    a) POPUNDER (deja configure ci-dessous) : simple, mais AUCUNE
+//       verification n'est possible avec ce format. Adsterra ne renvoie
+//       aucun signal "pub affichee", et le popunder s'ouvre expres sans
+//       voler le focus de la page principale.
+//
+//    b) DIRECT LINK (recommande si vous voulez une vraie verification) :
+//       creez un "Ad Unit" de type "Direct Link" dans votre dashboard
+//       Adsterra, collez son URL ci-dessous. On l'ouvre alors nous-memes
+//       avec window.open(), ce qui permet de verifier que ca a bien
+//       fonctionne ET de detecter le retour de l'utilisateur sur l'onglet.
+const ADSTERRA_DIRECT_LINK_URL = "https://www.effectivecpmnetwork.com/b9s4q78k8?key=c72b0e4caa6d14011fdbb092f399580e";
+
 function injectAdsterra() {
   const slot = document.getElementById("adsterraSlot");
   slot.innerHTML = "";
@@ -30,7 +44,55 @@ function injectAdsterra() {
   script.src = "https://pl30653477.effectivecpmnetwork.com/ff/cb/ee/ffcbee00d7ebb42dc4ab275d61e677cf.js";
   document.body.appendChild(script);
 
-  slot.textContent = "Publicité chargée.";
+  slot.textContent = "Publicité chargée en arrière-plan (nouvel onglet).";
+}
+
+// =============================================================================
+// Verification "pub vue" (uniquement possible en mode Direct Link)
+// =============================================================================
+let adVerified = false;
+
+function triggerAdAndVerify() {
+  adVerified = false;
+  const slot = document.getElementById("adsterraSlot");
+  const useDirectLink = ADSTERRA_DIRECT_LINK_URL && ADSTERRA_DIRECT_LINK_URL.trim() !== "";
+
+  if (useDirectLink) {
+    const win = window.open(ADSTERRA_DIRECT_LINK_URL, "_blank");
+    if (!win) {
+      slot.textContent = "⚠️ Pop-up bloquée par votre navigateur. Autorisez les pop-ups pour ce site puis réessayez.";
+      return;
+    }
+    slot.textContent = "Publicité ouverte dans un nouvel onglet — regardez-la puis revenez ici.";
+    window.addEventListener("focus", onReturnFromAd, { once: true });
+  } else {
+    // Popunder : pas de verification possible avec ce format, on ne bloque
+    // donc pas la validation dessus (seul le minuteur, verifie cote serveur,
+    // protege contre la fraude).
+    injectAdsterra();
+    adVerified = true;
+  }
+  refreshConfirmButtonState();
+}
+
+function onReturnFromAd() {
+  adVerified = true;
+  const slot = document.getElementById("adsterraSlot");
+  slot.textContent = "✅ Retour détecté après consultation de la publicité.";
+  refreshConfirmButtonState();
+}
+
+function refreshConfirmButtonState() {
+  const btn = document.getElementById("confirmBtn");
+  if (!btn) return;
+  const timerDone = watchElapsed >= (currentAd?.duration_seconds || 0);
+  if (timerDone && adVerified) {
+    btn.disabled = false;
+    btn.textContent = "Valider et encaisser";
+  } else if (timerDone && !adVerified) {
+    btn.disabled = true;
+    btn.textContent = "Revenez sur cet onglet après avoir vu la pub";
+  }
 }
 
 // =============================================================================
@@ -53,6 +115,21 @@ const DESTINATION_LABELS = {
 
 let currentCurrency = CURRENCY_MAP.XOF;
 
+// Capture le "?ref=<id>" present dans l'URL (lien d'invitation) des le
+// chargement de la page, pour pouvoir l'envoyer au moment de l'inscription.
+const REFERRAL_ID = new URLSearchParams(window.location.search).get("ref") || "";
+
+const DEMO_AD = Object.freeze({
+  id: "demo",
+  title: "Publicité de démonstration",
+  description: "Cliquez pour tester le flux complet de visionnage.",
+  video_url: "https://www.w3schools.com/html/mov_bbb.mp4",
+  reward_amount: 500,
+  duration_seconds: 5,
+  active: true,
+  is_demo: true,
+});
+
 function fmtMoney(n) {
   try {
     return new Intl.NumberFormat(currentCurrency.locale, {
@@ -74,6 +151,39 @@ const WITHDRAW_RULES = {
   minBalance: 10000,
   referrals: 8,
 };
+
+function getInviteLink() {
+  if (!session?.user?.id) return "";
+  const baseUrl = window.location.origin + window.location.pathname;
+  const url = new URL(baseUrl);
+  url.searchParams.set("ref", session.user.id);
+  return url.toString();
+}
+
+function renderInviteLink() {
+  const input = document.getElementById("inviteLink");
+  if (!input) return;
+  input.value = getInviteLink();
+}
+
+async function copyInviteLink() {
+  const input = document.getElementById("inviteLink");
+  const msg = document.getElementById("inviteOk");
+  if (!input) return;
+  if (!input.value) {
+    msg.textContent = "Connexion requise pour générer un lien.";
+    return;
+  }
+
+  try {
+    await navigator.clipboard.writeText(input.value);
+    msg.textContent = "Lien copié avec succès !";
+  } catch {
+    input.select();
+    document.execCommand("copy");
+    msg.textContent = "Lien copié avec succès !";
+  }
+}
 
 function renderWithdrawProgress({ watchedCount = 0, balance = 0, referralCount = 0 }) {
   const el = document.getElementById("wdProgress");
@@ -161,13 +271,52 @@ function renderVideoPlayer(url) {
 // =============================================================================
 // Authentification
 // =============================================================================
+const DEMO_LOGIN_EMAIL = "demo@demo.com";
+const DEMO_LOGIN_PASSWORD = "demo1234";
+
+function setDemoSession(email, name = "Utilisateur démo") {
+  session = {
+    user: {
+      id: "demo-user",
+      email,
+    },
+  };
+  profile = {
+    id: "demo-user",
+    name,
+    phone: "",
+    balance: 0,
+    role: "user",
+  };
+  document.getElementById("navLoggedIn").classList.remove("hidden");
+  document.getElementById("navAdminLink").classList.add("hidden");
+  showView("dashboard");
+}
+
+async function tryDemoLogin(email, password) {
+  const normalizedEmail = (email || "").trim().toLowerCase();
+  const normalizedPassword = (password || "").trim();
+  if (normalizedEmail === DEMO_LOGIN_EMAIL && normalizedPassword === DEMO_LOGIN_PASSWORD) {
+    setDemoSession(email, "Utilisateur démo");
+    return true;
+  }
+  return false;
+}
+
 document.getElementById("loginForm").addEventListener("submit", async (e) => {
   e.preventDefault();
   const errEl = document.getElementById("loginError");
   errEl.textContent = "";
+  const email = document.getElementById("loginEmail").value;
+  const password = document.getElementById("loginPassword").value;
+
+  if (await tryDemoLogin(email, password)) {
+    return;
+  }
+
   const { error } = await sb.auth.signInWithPassword({
-    email: document.getElementById("loginEmail").value,
-    password: document.getElementById("loginPassword").value,
+    email,
+    password,
   });
   if (error) errEl.textContent = traduireErreur(error.message);
 });
@@ -176,9 +325,16 @@ document.getElementById("registerForm").addEventListener("submit", async (e) => 
   e.preventDefault();
   const errEl = document.getElementById("registerError");
   errEl.textContent = "";
+  const email = document.getElementById("regEmail").value;
+  const password = document.getElementById("regPassword").value;
+
+  if (await tryDemoLogin(email, password)) {
+    return;
+  }
+
   const { error } = await sb.auth.signUp({
-    email: document.getElementById("regEmail").value,
-    password: document.getElementById("regPassword").value,
+    email,
+    password,
     options: {
       data: {
         name: document.getElementById("regName").value,
@@ -204,8 +360,10 @@ sb.auth.onAuthStateChange(async (event, s) => {
   session = s;
   if (session) {
     await loadProfile();
+    renderInviteLink();
     document.getElementById("navLoggedIn").classList.remove("hidden");
-    document.getElementById("navAdminLink").classList.toggle("hidden", profile.role !== "admin");
+    const role = profile?.role || "user";
+    document.getElementById("navAdminLink").classList.toggle("hidden", role !== "admin");
     await loadCurrencySettings();
     showView("dashboard");
   } else {
@@ -216,8 +374,30 @@ sb.auth.onAuthStateChange(async (event, s) => {
 });
 
 async function loadProfile() {
+  if (!session?.user?.id) {
+    profile = null;
+    return;
+  }
+
   const { data, error } = await sb.from("profiles").select("*").eq("id", session.user.id).single();
-  if (!error) profile = data;
+  if (error) {
+    profile = {
+      id: session.user.id,
+      name: session.user.email || "Utilisateur",
+      phone: "",
+      balance: 0,
+      role: "user",
+    };
+    return;
+  }
+
+  profile = data || {
+    id: session.user.id,
+    name: session.user.email || "Utilisateur",
+    phone: "",
+    balance: 0,
+    role: "user",
+  };
 }
 
 async function loadCurrencySettings() {
@@ -228,13 +408,37 @@ async function loadCurrencySettings() {
 // =============================================================================
 // Dashboard
 // =============================================================================
+// Choisit 5 pubs parmi les actives, de façon stable pendant une heure donnée
+// (tout le monde voit la même sélection pendant la même heure), puis ça
+// change automatiquement à l'heure suivante.
+function pickHourlyAds(ads) {
+  if (ads.length <= 5) return ads;
+  const hourIndex = Math.floor(Date.now() / 3600000);
+  const start = hourIndex % ads.length;
+  const selection = [];
+  for (let i = 0; i < 5; i++) selection.push(ads[(start + i) % ads.length]);
+  return selection;
+}
+
+function updateRotationCountdown() {
+  const el = document.getElementById("nextRotation");
+  if (!el) return;
+  const msLeft = 3600000 - (Date.now() % 3600000);
+  const min = Math.floor(msLeft / 60000);
+  const sec = Math.floor((msLeft % 60000) / 1000);
+  el.textContent = `${min}min ${sec.toString().padStart(2, "0")}s`;
+}
+setInterval(updateRotationCountdown, 1000);
+
 async function loadDashboard() {
   await loadProfile();
   await loadCurrencySettings();
+  renderInviteLink();
+  updateRotationCountdown();
   document.getElementById("dashBalance").textContent = fmtMoney(profile.balance);
 
   const today = new Date().toISOString().slice(0, 10);
-  const { data: ads } = await sb.from("ads").select("*").eq("active", true).order("id");
+  const { data: ads, error: adsError } = await sb.from("ads").select("*").eq("active", true).order("id");
   const { data: doneRows } = await sb
     .from("watches")
     .select("ad_id")
@@ -245,7 +449,21 @@ async function loadDashboard() {
 
   const grid = document.getElementById("adsGrid");
   grid.innerHTML = "";
-  (ads || []).forEach((ad) => {
+
+  const adsToRender = (ads && ads.length > 0) ? pickHourlyAds(ads) : [DEMO_AD];
+
+  if (adsError && (!ads || ads.length === 0)) {
+    grid.innerHTML = `
+      <div class="ad-card" style="grid-column:1/-1;">
+        <div class="thumb">⚠️</div>
+        <div class="body">
+          <strong>Mode démo activé</strong>
+          <span style="color:var(--muted);font-size:0.85rem;">Une publicité de test a été chargée pour vous permettre de tester le flux complet.</span>
+        </div>
+      </div>`;
+  }
+
+  adsToRender.forEach((ad) => {
     const watchedToday = doneIds.has(ad.id);
     const el = document.createElement("div");
     el.className = "ad-card";
@@ -275,13 +493,27 @@ async function openWatch(adId) {
   clearInterval(watchTimer);
   watchElapsed = 0;
 
-  const { data: ad } = await sb.from("ads").select("*").eq("id", adId).single();
-  if (!ad) { document.getElementById("watchErr").textContent = "Publicité introuvable."; return; }
+  let ad = null;
+  if (adId === "demo") {
+    ad = DEMO_AD;
+  } else {
+    const { data, error } = await sb.from("ads").select("*").eq("id", adId).single();
+    if (error || !data) { document.getElementById("watchErr").textContent = "Publicité introuvable."; return; }
+    ad = data;
+  }
+
   currentAd = ad;
 
   document.getElementById("watchTitle").textContent = ad.title + " — +" + fmtMoney(ad.reward_amount);
-  document.getElementById("playerContainer").innerHTML = renderVideoPlayer(ad.video_url);
-  injectAdsterra();
+  // Pas de lecteur video a nous : la pub vient uniquement d'Adsterra,
+  // declenchee ici (Direct Link verifiable si configure, sinon Popunder).
+  triggerAdAndVerify();
+
+  const isDemo = ad.is_demo || ad.id === "demo";
+  if (isDemo) {
+    watchTimer = setInterval(() => tickWatch(ad.duration_seconds || 5), 1000);
+    return;
+  }
 
   const { data, error } = await sb.rpc("start_watch", { p_ad_id: adId });
   if (error) { document.getElementById("watchErr").textContent = traduireErreurRpc(error.message); return; }
@@ -300,13 +532,21 @@ function tickWatch(durationSeconds) {
 
   if (remaining <= 0) {
     clearInterval(watchTimer);
-    const btn = document.getElementById("confirmBtn");
-    btn.disabled = false;
-    btn.textContent = "Valider et encaisser";
+    refreshConfirmButtonState();
   }
 }
 
 document.getElementById("confirmBtn").addEventListener("click", async () => {
+  if (currentAd?.is_demo || currentAd?.id === "demo") {
+    const reward = Number(currentAd.reward_amount || 500);
+    const nextBalance = Number(profile?.balance || 0) + reward;
+    if (profile) profile.balance = nextBalance;
+    document.getElementById("watchOk").textContent = `+${fmtMoney(reward)} crédités ! Nouveau solde : ${fmtMoney(nextBalance)}.`;
+    document.getElementById("confirmBtn").disabled = true;
+    setTimeout(() => showView("dashboard"), 1500);
+    return;
+  }
+
   const { data, error } = await sb.rpc("complete_watch", { p_watch_id: watchId });
   if (error) { document.getElementById("watchErr").textContent = traduireErreurRpc(error.message); return; }
   const row = Array.isArray(data) ? data[0] : data;
