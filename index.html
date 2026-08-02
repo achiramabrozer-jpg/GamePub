@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GainPub — Regardez des pubs, gagnez de l'argent</title>
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+  <div class="topbar">
+    <div class="brand"><span class="coin">₣</span> GainPub</div>
+    <div class="nav-links hidden" id="navLoggedIn">
+      <a href="#" onclick="showView('dashboard');return false;">Publicités</a>
+      <a href="#" onclick="showView('withdraw');return false;">Retraits</a>
+      <a href="#" id="navAdminLink" class="hidden" onclick="showView('admin');return false;">Admin</a>
+      <a href="#" onclick="doLogout();return false;">Déconnexion</a>
+    </div>
+  </div>
+
+  <!-- ================= AUTH ================= -->
+  <div class="view active" id="view-auth">
+    <div class="container" style="max-width:460px;">
+      <h1>Regardez. Gagnez. Retirez.</h1>
+      <p class="lede">Chaque publicité regardée jusqu'au bout vous rapporte quelques FCFA / € / $, crédités sur votre compte.</p>
+
+      <div class="card">
+        <div class="tabs">
+          <button id="tabLogin" class="active" onclick="switchAuthTab('login')">Connexion</button>
+          <button id="tabRegister" onclick="switchAuthTab('register')">Inscription</button>
+        </div>
+
+        <form id="loginForm">
+          <label>Email</label>
+          <input type="email" id="loginEmail" required>
+          <label>Mot de passe</label>
+          <input type="password" id="loginPassword" required>
+          <div style="margin-top:20px;"><button type="submit">Se connecter</button></div>
+          <div class="error" id="loginError"></div>
+        </form>
+
+        <form id="registerForm" style="display:none;">
+          <label>Nom complet</label>
+          <input type="text" id="regName" required>
+          <label>Email</label>
+          <input type="email" id="regEmail" required>
+          <label>Téléphone (optionnel, utile pour Mobile Money)</label>
+          <input type="tel" id="regPhone" placeholder="9x xx xx xx">
+          <label>Mot de passe (6 caractères min.)</label>
+          <input type="password" id="regPassword" required>
+          <div style="margin-top:20px;"><button type="submit">Créer mon compte</button></div>
+          <div class="error" id="registerError"></div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= DASHBOARD ================= -->
+  <div class="view" id="view-dashboard">
+    <div class="container">
+      <div class="balance-hero"><div>
+        <div class="label">Votre solde</div>
+        <span class="amount" id="dashBalance">—</span>
+      </div></div>
+
+      <h2>Publicités disponibles aujourd'hui</h2>
+      <p class="lede" style="margin-top:-8px;">Regardez chaque pub jusqu'au bout pour débloquer sa récompense. Une pub ne rapporte qu'une fois par jour.</p>
+      <div class="grid" id="adsGrid"></div>
+    </div>
+  </div>
+
+  <!-- ================= WATCH ================= -->
+  <div class="view" id="view-watch">
+    <div class="container" style="max-width:520px;">
+      <div class="card">
+        <h2 id="watchTitle">Chargement…</h2>
+
+        <div class="ad-slot" id="adsterraSlot">
+          Emplacement pub Adsterra — collez ici le code fourni par votre tableau de bord Adsterra (voir commentaire dans app.js).
+        </div>
+
+        <div id="playerContainer"></div>
+
+        <div class="ring-wrap">
+          <svg width="130" height="130" class="ring">
+            <circle class="ring-bg" cx="65" cy="65" r="52"></circle>
+            <circle class="ring-fg" id="ringFg" cx="65" cy="65" r="52" stroke-dasharray="327" stroke-dashoffset="327"></circle>
+          </svg>
+        </div>
+        <div class="ring-label" id="ringLabel">–</div>
+
+        <div style="text-align:center;margin-top:10px;">
+          <button id="confirmBtn" disabled>Regardez jusqu'au bout pour valider</button>
+          <button class="secondary" onclick="showView('dashboard')">Annuler</button>
+        </div>
+        <div class="error" id="watchErr"></div>
+        <div class="success" id="watchOk"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= WITHDRAW ================= -->
+  <div class="view" id="view-withdraw">
+    <div class="container" style="max-width:560px;">
+      <div class="balance-hero"><div>
+        <div class="label">Disponible pour retrait</div>
+        <span class="amount" id="wdBalance">—</span>
+      </div></div>
+
+      <div class="card">
+        <h2>Demander un retrait</h2>
+        <p class="lede" style="margin-top:-6px;" id="wdMinInfo"></p>
+        <form id="withdrawForm">
+          <label>Montant</label>
+          <input type="number" id="wdAmount" required>
+          <label>Méthode</label>
+          <select id="wdMethod"></select>
+          <label id="wdDestLabel">Destination</label>
+          <input type="text" id="wdDestination" required>
+          <div style="margin-top:20px;"><button type="submit">Demander le retrait</button></div>
+          <div class="error" id="wdErr"></div>
+          <div class="success" id="wdOk"></div>
+        </form>
+      </div>
+
+      <div class="card">
+        <h2>Historique</h2>
+        <table>
+          <thead><tr><th>Date</th><th>Montant</th><th>Méthode</th><th>Statut</th></tr></thead>
+          <tbody id="wdHistoryBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= ADMIN ================= -->
+  <div class="view" id="view-admin">
+    <div class="container">
+      <div class="card">
+        <h2>Paramètres du site</h2>
+        <label>Devise active</label>
+        <select id="currencySelect" style="max-width:280px;"></select>
+        <div style="margin-top:14px;"><button id="saveCurrencyBtn">Enregistrer</button></div>
+        <div class="success" id="currencyOk"></div>
+      </div>
+
+      <div class="grid" style="margin-bottom:24px;">
+        <div class="card"><div style="color:var(--muted);">Utilisateurs</div><h2 id="statUsers">—</h2></div>
+        <div class="card"><div style="color:var(--muted);">Total payé</div><h2 id="statPaid">—</h2></div>
+        <div class="card"><div style="color:var(--muted);">Retraits en attente</div><h2 id="statPending">—</h2></div>
+        <div class="card"><div style="color:var(--muted);">Pubs regardées</div><h2 id="statWatches">—</h2></div>
+      </div>
+
+      <div class="card">
+        <h2>Retraits à traiter</h2>
+        <table>
+          <thead><tr><th>Utilisateur</th><th>Montant</th><th>Méthode</th><th>Destination</th><th>Statut</th><th>Action</th></tr></thead>
+          <tbody id="adminWithdrawalsBody"></tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <h2>Publicités</h2>
+        <table>
+          <thead><tr><th>Titre</th><th>Récompense</th><th>Durée</th><th>Statut</th><th>Action</th></tr></thead>
+          <tbody id="adminAdsBody"></tbody>
+        </table>
+
+        <h3 style="margin-top:24px;">Ajouter une publicité</h3>
+        <form id="adForm">
+          <label>Titre</label>
+          <input type="text" id="adTitle" required>
+          <label>Description</label>
+          <input type="text" id="adDescription">
+          <label>Lien de la vidéo (YouTube, Vimeo, ou lien direct .mp4)</label>
+          <input type="url" id="adVideoUrl" required placeholder="https://www.youtube.com/watch?v=...">
+          <label>Récompense</label>
+          <input type="number" id="adReward" min="1" required>
+          <label>Durée à regarder (secondes)</label>
+          <input type="number" id="adDuration" min="1" required>
+          <div style="margin-top:20px;"><button type="submit">Ajouter</button></div>
+          <div class="error" id="adErr"></div>
+        </form>
+      </div>
+
+      <div class="card">
+        <h2>Utilisateurs</h2>
+        <table>
+          <thead><tr><th>Nom</th><th>Téléphone</th><th>Solde</th></tr></thead>
+          <tbody id="adminUsersBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
