@@ -3,7 +3,7 @@
 // =============================================================================
 
 // 1) Supabase : Dashboard Supabase > Project Settings > API
-const SUPABASE_URL = "https://ojmfixyicgrcucdncja.supabase.co";
+const SUPABASE_URL = "https://ojmfisxyicgrcucdncja.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9qbWZpc3h5aWNncmN1Y2RuY2phIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU2ODk5MDAsImV4cCI6MjEwMTI2NTkwMH0.Zwyn5_jmiTWTrcQ-yYidf5xHjSuumyGTMVq6OOjUj4s";
 
 // 2) Adsterra : DEUX formats sont actifs en meme temps ici.
@@ -299,6 +299,16 @@ async function loadWithdraw() {
 
   document.getElementById("wdBalance").textContent = fmtMoney(profile.balance);
   const minWithdrawal = info ? info.min_withdrawal : currentCurrency.min;
+  const rewardAmount = info ? info.reward_amount : currentCurrency.min;
+  const needed = profile.balance < minWithdrawal
+    ? Math.ceil((minWithdrawal - profile.balance) / rewardAmount)
+    : 0;
+  const wdNeedText = document.getElementById("wdNeedText");
+  if (wdNeedText) {
+    wdNeedText.textContent = needed > 0
+      ? `Il vous reste ${needed} publicité${needed > 1 ? "s" : ""} pour atteindre le seuil de retrait.`
+      : "Vous pouvez retirer maintenant.";
+  }
   const delayDays = info ? info.payout_delay_days : 7;
   document.getElementById("wdMinInfo").textContent =
     `Retrait minimum : ${fmtMoney(minWithdrawal)}. Le paiement est traité sous ${delayDays} jours.`;
