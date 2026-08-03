@@ -3,8 +3,8 @@
 // =============================================================================
 
 // 1) Supabase : Dashboard Supabase > Project Settings > API
-const SUPABASE_URL = "https://VOTRE-PROJET.supabase.co";
-const SUPABASE_ANON_KEY = "VOTRE_CLE_ANON_PUBLIC";
+const SUPABASE_URL = "https://ojmfixyicgrcucdncja.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9qbWZpc3h5aWNncmN1Y2RuY2phIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU2ODk5MDAsImV4cCI6MjEwMTI2NTkwMH0.Zwyn5_jmiTWTrcQ-yYidf5xHjSuumyGTMVq6OOjUj4s";
 
 // 2) Adsterra : DEUX formats sont actifs en meme temps ici.
 //    a) POPUNDER : se charge en arriere-plan (aucune verification possible
