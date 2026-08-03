@@ -1,108 +1,59 @@
-# GainPub — version 3 fichiers (HTML + CSS + JS), Supabase + Adsterra
+# GainPub — version simplifiée (sans panel admin, sans gestion de pubs)
 
-Aucun serveur à faire tourner : c'est un site 100% statique (`index.html`,
-`style.css`, `app.js`) qui parle directement à Supabase (base de données +
-authentification) depuis le navigateur. Vous pouvez l'héberger n'importe où
-qui sert des fichiers statiques : Netlify, Vercel, GitHub Pages, Cloudflare
-Pages, ou même un simple hébergement mutuel.
+Cette version part du principe que **c'est Adsterra qui fournit le contenu
+publicitaire** — le site ne gère plus de liste de "pubs" à créer à la main.
+Chaque heure, l'utilisateur peut regarder un nombre fixe de publicités
+(5 par défaut) : chaque clic sur "Regarder" ouvre le Smart Link Adsterra dans
+un nouvel onglet, un minuteur compte le temps, et une récompense fixe est
+créditée une fois le temps écoulé ET le retour sur le site détecté.
 
-## Nouveautés récentes
+**Il n'y a plus de panel admin sur le site.** Vous gérez tout directement
+dans l'interface Supabase (Table Editor) :
 
-- **Rotation horaire des pubs** : le tableau de bord n'affiche que 5 publicités
-  à la fois. La sélection change automatiquement chaque heure (tout le monde
-  voit la même sélection pendant la même heure) — un compte à rebours indique
-  le temps restant avant la prochaine sélection. Si vous avez 5 pubs ou moins
-  au total, elles sont toutes affichées en permanence.
-- **Plus de lecteur vidéo interne** : la page de visionnage n'essaie plus
-  d'afficher une vidéo à nous — elle déclenche uniquement le Popunder Adsterra
-  en arrière-plan pendant que le minuteur tourne. C'est Adsterra qui génère la
-  pub à chaque clic sur "Regarder".
-- **Système de parrainage réel** : le lien d'invitation (`?ref=...`) est
-  maintenant vraiment enregistré en base à l'inscription (voir
-  `supabase-schema.sql`, colonne `referred_by`), et le compteur
-  "Invitations X/8" sur la page de retrait reflète les vrais parrainages.
-- **Page de connexion repensée** avec un argumentaire visuel à côté du
-  formulaire.
+| Ce que vous voulez faire | Où le faire |
+|---|---|
+| Changer la devise, le montant de la récompense, la durée du minuteur, le nombre de pubs/heure | Table Editor → table `settings` (une seule ligne, id=1) |
+| Traiter un retrait | Table Editor → table `withdrawals` : envoyez l'argent réel, puis passez `status` à `paid` (ou `rejected` + remettre le montant dans `profiles.balance` du concerné) |
+| Voir vos utilisateurs et leurs soldes | Table Editor → table `profiles` |
 
-## Étape 1 — Créer le projet Supabase
+## Installation
 
-1. Allez sur [supabase.com](https://supabase.com), créez un compte et un
-   nouveau projet (gratuit).
-2. Dans **SQL Editor**, collez tout le contenu de `supabase-schema.sql` et
-   cliquez "Run". Ça crée les tables, la sécurité (RLS) et toute la logique
-   de gains/retraits sécurisée côté serveur Postgres.
-3. Dans **Project Settings > API**, copiez :
-   - `Project URL`
-   - la clé `anon public`
-4. Ouvrez `app.js` et remplacez tout en haut :
+1. **Supabase** : créez un projet sur supabase.com, collez tout le contenu de
+   `supabase-schema.sql` dans SQL Editor, cliquez "Run".
+2. Dans **Project Settings > API**, copiez `Project URL` et la clé
+   `anon public`, collez-les en haut de `app.js` :
    ```js
    const SUPABASE_URL = "https://VOTRE-PROJET.supabase.co";
    const SUPABASE_ANON_KEY = "VOTRE_CLE_ANON_PUBLIC";
    ```
+3. **Authentication > Providers > Email** : assurez-vous que "Enable Email
+   provider" et "Allow new users to sign up" sont activés (sinon l'inscription
+   échoue avec l'erreur "Email signups are disabled").
+4. Le Smart Link Adsterra est déjà branché dans `app.js`
+   (`ADSTERRA_SMARTLINK_URL`) — remplacez-le par le vôtre si besoin.
+5. Hébergez les 3 fichiers (`index.html`, `style.css`, `app.js`) sur Netlify
+   Drop, Vercel, ou GitHub Pages.
 
-## Étape 2 — Créer votre compte admin
+## Comment ça marche
 
-1. Ouvrez `index.html` dans un navigateur (ou déployez-le, voir Étape 4) et
-   inscrivez-vous normalement avec votre propre email.
-2. Retournez dans Supabase, **SQL Editor**, et lancez (avec votre email) :
-   ```sql
-   update profiles set role = 'admin'
-   where id = (select id from auth.users where email = 'votre@email.com');
-   ```
-3. Reconnectez-vous sur le site : l'onglet "Admin" apparaît dans le menu.
-
-## Étape 3 — Adsterra (monétisation réelle)
-
-1. Créez un compte sur [adsterra.com](https://adsterra.com), ajoutez votre
-   site (une fois qu'il a une URL publique — voir Étape 4) et attendez
-   l'approbation.
-2. Une fois approuvé, créez un "Ad Unit" (Social Bar, Banner ou Native
-   fonctionnent bien pour ce type de site) : Adsterra vous donne un extrait
-   `<script>...</script>`.
-3. Collez ce code dans `app.js`, fonction `injectAdsterra()` (les
-   instructions sont dans les commentaires du fichier).
-
-**Important à savoir** : Adsterra (comme la plupart des réseaux publicitaires)
-n'a pas de format "regardez X secondes = événement de fin" comme YouTube. Sur
-ce site, la pub Adsterra s'affiche simplement à côté du minuteur pendant que
-l'utilisateur patiente ; c'est notre propre minuteur (vérifié côté serveur
-Supabase) qui débloque la récompense, pas un signal venant d'Adsterra. Vérifiez
-aussi les conditions d'utilisation d'Adsterra concernant le "trafic incité"
-(payer les utilisateurs pour voir des pubs) avant de lancer publiquement —
-certains réseaux publicitaires restreignent ou interdisent ce modèle.
-
-## Étape 4 — Héberger le site
-
-Le plus simple : [Netlify Drop](https://app.netlify.com/drop) — glissez le
-dossier contenant `index.html`, `style.css`, `app.js` dans la page, et vous
-obtenez une URL publique en quelques secondes. Vous pouvez aussi utiliser
-GitHub Pages ou Vercel de la même façon (déployer un dossier statique).
-
-## Comment ça marche (architecture)
-
-- **Authentification** : gérée entièrement par Supabase Auth (email + mot de
-  passe). Pas de mot de passe stocké dans votre code.
-- **Anti-fraude** : le temps de visionnage minimum est vérifié **dans une
-  fonction Postgres** (`complete_watch`), pas dans le navigateur — un
-  utilisateur ne peut pas modifier le JavaScript pour tricher.
-- **Sécurité des soldes** : les utilisateurs ne peuvent jamais modifier leur
-  propre solde directement (Row Level Security). Seules les fonctions
-  sécurisées (`complete_watch`, `request_withdrawal`, `admin_approve_withdrawal`...)
-  peuvent le faire, et chacune vérifie les règles métier avant d'agir.
-- **Devises et méthodes de retrait** : Franc CFA (Flooz, T-Money, Orange
-  Money, Wave, MTN Mobile Money), Euro et Dollar (PayPal, virement). Réglable
-  dans le panneau admin.
-- **Paiement réel** : comme pour la version précédente, aucun opérateur
-  Mobile Money / PayPal n'est branché automatiquement (ça demande un compte
-  marchand). Chaque retrait reste "en attente" jusqu'à ce que vous l'ayez payé
-  manuellement puis approuvé dans l'admin.
+- **Quota horaire** : chaque utilisateur peut regarder jusqu'à
+  `watches_per_hour` publicités par heure (5 par défaut). Le quota se
+  réinitialise au début de chaque heure. C'est vérifié côté serveur
+  (fonction `start_watch`), impossible à contourner depuis le navigateur.
+- **Anti-fraude** : le temps minimum de visionnage est vérifié dans une
+  fonction Postgres (`complete_watch`), pas dans le JavaScript.
+- **Vérification "pub vue"** : en plus du minuteur, le site vérifie que
+  l'utilisateur est bien revenu sur l'onglet après avoir ouvert le Smart Link
+  Adsterra (détection du retour de focus) avant de débloquer le bouton
+  "Valider".
+- **Parrainage** : le lien d'invitation (`?ref=...`) enregistre vraiment qui a
+  invité qui (colonne `referred_by` dans `profiles`).
 
 ## Fichiers
 
 ```
-index.html            toutes les pages du site (connexion, tableau de bord,
-                       visionnage, retraits, admin) en une seule page
-style.css              habillage visuel
-app.js                 toute la logique (Supabase, minuteur, Adsterra...)
-supabase-schema.sql    a coller UNE FOIS dans Supabase (pas un fichier du site)
+index.html            connexion, tableau de bord, visionnage, retraits
+style.css             habillage visuel
+app.js                toute la logique (Supabase, minuteur, Adsterra)
+supabase-schema.sql   a coller UNE FOIS dans Supabase (pas un fichier du site)
 ```
